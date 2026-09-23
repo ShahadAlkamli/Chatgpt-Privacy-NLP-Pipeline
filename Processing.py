@@ -1,48 +1,73 @@
-import pandas as pd
+"""
+Preprocesses the raw ChatGPT tweet dataset to isolate privacy-related
+discussions.
+
+Applies lowercasing, hyperlink and mention removal, tokenization,
+stopword removal, and keyword matching to filter tweets addressing
+privacy and security, following the pipeline described in the paper.
+
+Input:  Data/ChatGPTtweets.csv
+Output: Data/preprocessed_tweets.csv
+"""
+
 import re
+import pandas as pd
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 
-# Load your CSV file containing tweets from the desktop
-input_file_path = '/Users/shahadsaeed/Desktop/ChatGPTtweets.csv'
-df = pd.read_csv(input_file_path)
+# Paths (relative to the repository root)
+INPUT_FILE = 'Data/ChatGPTtweets.csv'
+OUTPUT_FILE = 'Data/preprocessed_tweets.csv'
 
-# Preprocessing
+# Privacy and security keywords used to filter relevant tweets
+RELEVANT_KEYWORDS = [
+    'security', 'privacy', 'cybersecurity', 'confidentiality',
+    'secure', 'hack', 'hacker', 'encryption', 'theft'
+]
+
+STOP_WORDS = set(stopwords.words('english'))
+
+
 def preprocess_text(text):
-    # Check if the text is NaN, and if so, return empty strings
+    """Clean a single tweet and return it only if privacy-related.
+
+    Returns (original, processed) for relevant tweets, or (None, None)
+    for tweets that do not mention privacy or security.
+    """
     if pd.isna(text):
-        return '', ''
-    
-    # Convert text to lowercase for consistent analysis
-    text_lower = text.lower()
-    # Remove hyperlinks from the text
-    text_no_links = re.sub(r'http\S+', '', text_lower)
-    # Remove mentions
-    text_no_mentions = re.sub(r'@\w+', '', text_no_links)
-    
-    # Tokenize the text into individual words
-    tokens = word_tokenize(text_no_mentions)
-    # Remove common stop words that don't carry much meaning
-    stop_words = set(stopwords.words('english'))
-    tokens_no_stopwords = [word for word in tokens if word.isalpha() and word not in stop_words]
-    # Join the processed tokens into a string
-    processed_text = ' '.join(tokens_no_stopwords)
-    
-    # Additional preprocessing for data security and privacy
-    relevant_keywords = ['security', 'privacy', 'cybersecurity', 'confidentiality', 'secure', 'hack', 'hacker', 'encryption', 'theft']
-    
-    if any(keyword in processed_text.lower() for keyword in relevant_keywords):
-        return text, processed_text
-    else:
-        # Return empty strings if the tweet is not relevant
         return None, None
 
-# Apply preprocessing to each tweet and create new columns 'original_tweet' and 'processed_tweet'
-df['original_tweet'], df['processed_tweet'] = zip(*df['content'].apply(preprocess_text))
+    # Lowercase, then strip hyperlinks and mentions
+    cleaned = text.lower()
+    cleaned = re.sub(r'http\S+', '', cleaned)
+    cleaned = re.sub(r'@\w+', '', cleaned)
 
-# Filter out rows where both 'original_tweet' and 'processed_tweet' are empty
-df = df.dropna(subset=['original_tweet', 'processed_tweet'])
+    # Tokenize and remove stopwords and non-alphabetic tokens
+    tokens = word_tokenize(cleaned)
+    tokens = [w for w in tokens if w.isalpha() and w not in STOP_WORDS]
+    processed_text = ' '.join(tokens)
 
-# Save preprocessed data to a new CSV file on the desktop
-output_file_path = '/Users/shahadsaeed/Desktop/preprocessed_privacy_tweets.csv'
-df.to_csv(output_file_path, columns=['original_tweet', 'processed_tweet'], index=False)
+    # Keep only tweets matching a privacy or security keyword
+    if any(keyword in processed_text for keyword in RELEVANT_KEYWORDS):
+        return text, processed_text
+
+    return None, None
+
+
+if __name__ == '__main__':
+    df = pd.read_csv(INPUT_FILE)
+    print(f"Loaded {len(df)} tweets")
+
+    df['original_tweet'], df['processed_tweet'] = zip(
+        *df['content'].apply(preprocess_text)
+    )
+
+    df = df.dropna(subset=['original_tweet', 'processed_tweet'])
+    print(f"Retained {len(df)} privacy-related tweets")
+
+    df.to_csv(
+        OUTPUT_FILE,
+        columns=['original_tweet', 'processed_tweet'],
+        index=False
+    )
+    print(f"Saved to {OUTPUT_FILE}")
