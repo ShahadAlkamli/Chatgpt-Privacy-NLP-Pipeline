@@ -3,8 +3,8 @@ Preprocesses the raw ChatGPT tweet dataset to isolate privacy-related
 discussions.
 
 Applies lowercasing, hyperlink and mention removal, tokenization,
-stopword removal, and keyword matching to filter tweets addressing
-privacy and security, following the pipeline described in the paper.
+stopword removal, and keyword matching, following the pipeline
+described in the published study.
 
 Input:  Data/ChatGPTtweets.csv
 Output: Data/preprocessed_tweets.csv
@@ -29,7 +29,7 @@ STOP_WORDS = set(stopwords.words('english'))
 
 
 def preprocess_text(text):
-    """Clean a single tweet and return it only if privacy-related.
+    """Clean a tweet and return it only if privacy-related.
 
     Returns (original, processed) for relevant tweets, or (None, None)
     for tweets that do not mention privacy or security.
