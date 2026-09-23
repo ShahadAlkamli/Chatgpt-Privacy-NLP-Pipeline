@@ -17,15 +17,15 @@ OUTPUT_FILE = 'Data/categorized_tweets.csv'
 
 # Keyword lists for each privacy concern category
 CATEGORY_KEYWORDS = {
-    'Public Data Exploitation': [
+    'public_data_exploitation': [
         'public data', 'open data', 'sanitizing', 'training process',
         'training data', 'trained on', 'publicly available data'
     ],
-    'Personal Input Exploitation': [
+    'personal_input_exploitation': [
         'conversation', 'conversations', 'input data', 'private chat',
         'prompt', 'prompts'
     ],
-    'Unauthorized Access to Data': [
+    'unauthorized_access_to_data': [
         'unauthorized access', 'vulnerabilities', 'data breach',
         'data security', 'security breach', 'attack', 'attacking',
         'hack', 'hacking', 'threat', 'breach', 'unauthorized entry',
@@ -34,35 +34,25 @@ CATEGORY_KEYWORDS = {
 }
 
 
-def categorize(tweet):
-    """Return every category whose keywords appear in the tweet."""
-    if not isinstance(tweet, str):
-        return []
-
-    lowered = tweet.lower()
-    return [
-        category
-        for category, keywords in CATEGORY_KEYWORDS.items()
-        if any(keyword in lowered for keyword in keywords)
-    ]
+def matches(tweet, keywords):
+    """Check whether a tweet contains any of the given keywords."""
+    return isinstance(tweet, str) and any(
+        keyword in tweet.lower() for keyword in keywords
+    )
 
 
 if __name__ == '__main__':
     df = pd.read_csv(INPUT_FILE)
     print(f"Loaded {len(df)} tweets")
 
-    # Assign each tweet to one row per matching category
-    rows = []
-    for tweet in df['original_tweet']:
-        for category in categorize(tweet):
-            rows.append({'category': category, 'tweet': tweet})
+    # Build one data frame per category, then combine them
+    frames = []
+    for category, keywords in CATEGORY_KEYWORDS.items():
+        tweets = [t for t in df['original_tweet'] if matches(t, keywords)]
+        frames.append(pd.DataFrame({'content': tweets, 'category': category}))
+        print(f"  {category}: {len(tweets)}")
 
-    categorized = pd.DataFrame(rows)
+    combined = pd.concat(frames, ignore_index=True)
+    combined.to_csv(OUTPUT_FILE, index=False)
 
-    print('\nTweets per category:')
-    for category in CATEGORY_KEYWORDS:
-        count = (categorized['category'] == category).sum()
-        print(f"  {category}: {count}")
-
-    categorized.to_csv(OUTPUT_FILE, index=False)
-    print(f"\nSaved to {OUTPUT_FILE}")
+    print(f"\nSaved {len(combined)} categorized tweets to {OUTPUT_FILE}")
