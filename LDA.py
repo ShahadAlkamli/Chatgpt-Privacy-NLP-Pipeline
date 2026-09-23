@@ -1,25 +1,26 @@
 """
-LDA topic modeling on preprocessed ChatGPT privacy tweets.
+Determines the optimal number of LDA topics for the ChatGPT privacy
+tweets by evaluating coherence and perplexity across candidate values.
 
-Builds an LDA model with Gensim, prints the extracted topics, and
-visualizes the results as a word cloud and a topic distribution chart.
+Reproduces the topic selection analysis reported in the published study,
+which identified 3 as the optimal number of topics.
 
-The optimal number of topics (3) was determined using coherence and
-perplexity scores, as reported in the published study.
+Input: Data/preprocessed_tweets.csv
 """
 
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 from gensim import corpora
-from gensim.models import LdaModel
-from wordcloud import WordCloud
+from gensim.models import CoherenceModel, LdaModel
 
 # Paths (relative to the repository root)
 INPUT_FILE = 'Data/preprocessed_tweets.csv'
 
-NUM_TOPICS = 3
-NUM_WORDS = 10
+# Range of topic counts to evaluate
+START = 2
+LIMIT = 15
+STEP = 1
+
 PASSES = 15
 RANDOM_STATE = 42
 
@@ -33,93 +34,51 @@ tokenized = [text.split() for text in df['processed_tweet']]
 dictionary = corpora.Dictionary(tokenized)
 corpus = [dictionary.doc2bow(tokens) for tokens in tokenized]
 
-# Train the LDA model
-lda_model = LdaModel(
-    corpus,
-    num_topics=NUM_TOPICS,
-    id2word=dictionary,
-    passes=PASSES,
-    random_state=RANDOM_STATE
-)
+# Reconstruct token lists for coherence evaluation
+texts = [[dictionary[word_id] for word_id, _ in doc] for doc in corpus]
 
-# Print extracted topics
-print(f"\nExtracted {NUM_TOPICS} topics:\n")
-for topic_num, words in lda_model.show_topics(num_words=NUM_WORDS, formatted=False):
-    terms = ', '.join(word for word, _ in words)
-    print(f"Topic {topic_num}: {terms}\n")
+# Evaluate each candidate number of topics
+coherence_scores = []
+perplexity_scores = []
+topic_range = range(START, LIMIT, STEP)
 
-# Word cloud of the top terms across all topics
-top_words = [
-    word
-    for topic_id in range(NUM_TOPICS)
-    for word, _ in lda_model.show_topic(topic_id, topn=NUM_WORDS)
-]
+for num_topics in topic_range:
+    lda_model = LdaModel(
+        corpus,
+        num_topics=num_topics,
+        id2word=dictionary,
+        passes=PASSES,
+        random_state=RANDOM_STATE
+    )
 
-wordcloud = WordCloud(
-    width=800, height=400, background_color='white'
-).generate(' '.join(top_words))
+    coherence_model = CoherenceModel(
+        model=lda_model,
+        texts=texts,
+        dictionary=dictionary,
+        coherence='u_mass'
+    )
 
-plt.figure(figsize=(10, 5), dpi=300)
-plt.imshow(wordcloud, interpolation='bilinear')
-plt.axis('off')
+    coherence = coherence_model.get_coherence()
+    perplexity = lda_model.log_perplexity(corpus)
+
+    coherence_scores.append(coherence)
+    perplexity_scores.append(perplexity)
+
+    print(f"Topics: {num_topics:>2}  Coherence: {coherence:.4f}  Perplexity: {perplexity:.4f}")
+
+# Plot coherence and perplexity against the number of topics
+fig, ax1 = plt.subplots(figsize=(10, 5))
+
+ax1.set_xlabel('Number of Topics')
+ax1.set_ylabel('Coherence Score', color='tab:red')
+ax1.plot(topic_range, coherence_scores, color='tab:red')
+ax1.tick_params(axis='y', labelcolor='tab:red')
+
+ax2 = ax1.twinx()
+ax2.set_ylabel('Perplexity Score', color='tab:blue')
+ax2.plot(topic_range, perplexity_scores, color='tab:blue')
+ax2.tick_params(axis='y', labelcolor='tab:blue')
+
+plt.title('Coherence and Perplexity Scores vs. Number of Topics')
 plt.tight_layout()
-plt.show()
-
-# Distribution of dominant topics across documents
-dominant_topics = [
-    max(lda_model[doc], key=lambda x: x[1])[0] for doc in corpus
-]
-topic_counts = pd.Series(dominant_topics).value_counts().sort_index()
-
-plt.figure(figsize=(10, 6), dpi=300)
-sns.barplot(
-    x=topic_counts.index,
-    y=topic_counts.values,
-    hue=topic_counts.index,
-    palette='viridis',
-    legend=False
-)
-plt.title('Dominant Topic Distribution')
-plt.xlabel('Topic')
-plt.ylabel('Number of Tweets')
-plt.tight_layout()
-plt.show()
-
-print('\nTweets per topic:')
-for topic_id, count in topic_counts.items():
-    print(f"  Topic {topic_id}: {count}")    topic_words = lda_model.show_topic(topic_id, topn=10)
-    words = [word for word, _ in topic_words if word in dictionary.token2id]
-    topics.append(words)
-
-# Flatten the list of words
-all_words = [word for sublist in topics for word in sublist]
-
-# Concatenate all words into a single string
-text = ' '.join(all_words)
-
-# Generate a word cloud image
-wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
-
-# Display the generated image using Matplotlib with increased resolution (dpi)
-plt.figure(figsize=(10, 5), dpi=300)  # Adjust the dpi parameter
-plt.imshow(wordcloud, interpolation='bilinear')
-plt.axis('off')
-plt.show()
-
-# Visualize topics distribution
-# Get topic distribution for each document
-topics_distribution = [lda_model[doc] for doc in corpus]
-
-# Extract the dominant topic for each document
-dominant_topics = [max(topic, key=lambda x: x[1])[0] for topic in topics_distribution]
-
-# Count the occurrences of each dominant topic
-topic_counts = pd.Series(dominant_topics).value_counts().sort_index()
-
-# Visualize the distribution of dominant topics using a bar chart
-plt.figure(figsize=(10, 6), dpi=300)  # Adjust the dpi parameter
-sns.barplot(x=topic_counts.index, y=topic_counts.values, palette='viridis')
-plt.title('Dominant Topic Distribution')
-plt.xlabel('Dominant Topic')
-plt.ylabel('Number of Tweets')
 plt.show()
