@@ -9,17 +9,15 @@ Authors: Shahad Alkamli & Reham Alabduljabbar
 
 ## 📌 Overview
 
-This repository contains the full Natural Language Processing (NLP) pipeline used in the research study
+This repository contains the Natural Language Processing (NLP) pipeline used in the research study
 *Understanding privacy concerns in ChatGPT: A data-driven approach with LDA topic modeling*.
-The project analyzes tweets discussing ChatGPT to identify user privacy concerns using:
 
-- Data preprocessing
-- Tokenization and segmentation
-- Latent Dirichlet Allocation (LDA) topic modeling
+The study analyzes tweets discussing ChatGPT to identify user privacy concerns through:
+
+- Data preprocessing and keyword-based filtering
+- LDA topic modeling for thematic exploration
 - Sentiment analysis
-- Keyword-based categorization into privacy categories
-
-This work supports the findings presented in the published study.
+- Keyword-driven categorization into privacy concern categories
 
 ---
 
@@ -29,64 +27,62 @@ This work supports the findings presented in the published study.
 ├── Data/
 │     └── preprocessed_tweets.csv     # The 11k processed tweets used in the analysis
 │
-├── Processing.py                     # Preprocessing: cleaning, tokenization, stopword removal
-├── Segmentation.py                   # Additional segmentation and tokenization utilities
-├── LDA.py                            # LDA topic modeling with Gensim
-├── Sentiment.py                      # Sentiment analysis module
+├── Processing.py                     # Preprocessing: cleaning, tokenization, keyword filtering
+├── LDA.py                            # Topic modeling and optimal topic count selection
+├── Categorization.py                 # Keyword-driven categorization into privacy categories
+├── Sentiment.py                      # Sentiment analysis and visualization
 └── README.md
 ```
 
-The included dataset matches the refined dataset described in the research study
-(processed from 500k tweets → 11k privacy-related tweets).
+The included dataset matches the refined dataset described in the study: 500k raw tweets reduced to 11k privacy-related tweets.
 
 ---
 
-## 🔬 Methodology Summary
+## 🔬 Methodology
 
 ### **1. Data Preprocessing**
 
-Performed using `Processing.py`, which:
+`Processing.py` refines the raw dataset of 500k tweets mentioning ChatGPT:
 
 - Converts text to lowercase
-- Removes links and mentions
-- Tokenizes words
-- Removes stopwords
-- Filters tweets based on privacy-related keywords
-- Saves the processed tweets to the dataset
+- Removes hyperlinks and mentions
+- Tokenizes with NLTK
+- Removes English stopwords
+- Filters by privacy keywords: *security, privacy, cybersecurity, confidentiality, secure, hack, hacker, encryption, theft*
 
-### **2. Topic Modeling (LDA)**
+This produces the 11k refined tweets used throughout the analysis.
 
-`LDA.py` uses **Gensim** to build an LDA model that extracts latent themes related to:
+### **2. Topic Modeling**
 
-- Public data exploitation
-- Personal input exploitation
-- Unauthorized access
+`LDA.py` uses **Gensim** to evaluate candidate topic counts from 2 to 14, computing coherence (u_mass) and perplexity for each. Based on these metrics, the optimal number of topics was determined to be **3**.
 
-The optimal number of topics was determined to be **3**, matching the findings in the study.
+Topic modeling provides a high-level overview of discussion themes and is independent of the categorization step below.
 
 ### **3. Sentiment Analysis**
 
-`Sentiment.py` computes sentiment polarity to explore how users emotionally respond to privacy concerns.
+`Sentiment.py` uses **TextBlob** to classify each tweet as positive, negative, or neutral based on polarity, then visualizes the distribution as a bar chart and a pie chart.
 
 ### **4. Data Categorization**
 
-Tweets are categorized into three classes:
+`Categorization.py` classifies tweets into three privacy concern categories using keyword matching, independently of the topic model:
 
-1. **Public Data Exploitation**
-2. **Personal Input Exploitation**
-3. **Unauthorized Access**
+| Category | Keywords |
+|----------|----------|
+| **Public Data Exploitation** | public data, open data, sanitizing, training process, training data, trained on, publicly available data |
+| **Personal Input Exploitation** | conversation, conversations, input data, private chat, prompt, prompts |
+| **Unauthorized Access to Data** | unauthorized access, vulnerabilities, data breach, data security, security breach, attack, attacking, hack, hacking, threat, breach, unauthorized entry, data compromise |
 
 ---
 
 ## ▶️ Running the Project
 
-### **Install dependencies**
+### Install dependencies
 
 ```bash
-pip install numpy pandas nltk gensim textblob scikit-learn
+pip install numpy pandas nltk gensim textblob matplotlib
 ```
 
-Download NLTK resources (if needed):
+Download NLTK resources:
 
 ```python
 import nltk
@@ -94,26 +90,28 @@ nltk.download('punkt')
 nltk.download('stopwords')
 ```
 
-### **Run the pipeline**
+### Run the pipeline
 
 ```bash
-python Processing.py      # preprocessing
-python Segmentation.py    # segmentation
-python LDA.py             # topic modeling
-python Sentiment.py       # sentiment analysis
+python Processing.py        # preprocessing and filtering
+python LDA.py               # topic modeling
+python Sentiment.py         # sentiment analysis
+python Categorization.py    # privacy categorization
 ```
+
+`Processing.py` expects the raw dataset at `Data/ChatGPTtweets.csv`. The preprocessed output is already included, so the remaining scripts can be run directly.
 
 ---
 
 ## 📊 Dataset
 
-The `Data/preprocessed_tweets.csv` file contains:
+`Data/preprocessed_tweets.csv` contains:
 
-- Cleaned, tokenized tweets
 - 11k tweets filtered for privacy discussions
-- No usernames or metadata (in compliance with Twitter TOS)
+- Original and processed text for each tweet
+- No usernames or metadata, in compliance with Twitter's terms of service
 
-This dataset was used directly in the analysis presented in the paper.
+The raw dataset of 500k ChatGPT tweets is available on [Kaggle](https://www.kaggle.com/datasets/khalidryder777/500k-chatgpt-tweets-jan-mar-2023).
 
 ---
 
@@ -132,95 +130,3 @@ Heliyon, 10(20), e39087. https://doi.org/10.1016/j.heliyon.2024.e39087
 ## 📝 License
 
 This repository is provided for academic and research purposes.
-### **1️⃣ Data Preprocessing**
-Performed using `Processing.py`, which:
-
-- Converts text to lowercase  
-- Removes links and mentions  
-- Tokenizes words  
-- Removes stopwords  
-- Filters tweets based on privacy-related keywords  
-- Saves the processed tweets to the dataset
-
-### **2️⃣ Topic Modeling (LDA)**  
-`LDA.py` uses **Gensim** to build an LDA model that extracts latent themes related to:
-
-- Public data exploitation  
-- Personal input exploitation  
-- Unauthorized access  
-
-The optimal number of topics was determined to be **3**, matching the findings in the study.
-
-### **3️⃣ Sentiment Analysis**  
-`Sentiment.py` computes sentiment polarity to explore how users emotionally respond to privacy concerns.
-
-### **4️⃣ Data Categorization**  
-Tweets are categorized into 3 classes:
-
-1. **Public Data Exploitation**  
-2. **Personal Input Exploitation**  
-3. **Unauthorized Access**
-
----
-
-## ▶️ Running the Project
-
-### **Install dependencies**
-```bash
-pip install numpy pandas nltk gensim textblob scikit-learn
-```
-
-Download NLTK resources (if needed):
-
-```python
-import nltk
-nltk.download('punkt')
-nltk.download('stopwords')
-```
-
-### **Run preprocessing**
-```bash
-python Processing.py
-```
-
-### **Run segmentation**
-```bash
-python Segmentation2.py
-```
-
-### **Train LDA topic model**
-```bash
-python LDA.py
-```
-
-### **Run sentiment analysis**
-```bash
-python Sentiment.py
-```
-
----
-
-## 📊 Dataset
-
-The `data/preprocessed_tweets.csv` file contains:
-
-- Cleaned, tokenized tweets  
-- 11k tweets filtered for privacy discussions  
-- No usernames or metadata (in compliance with Twitter TOS)
-
-This dataset was used directly in the analysis presented in the paper.
-
----
-
-## 📚 Citation
-
-If you use this code or dataset, please cite:
-
-**Alkamli, S., & Alabduljabbar, R. (2024).  
-Understanding privacy concerns in ChatGPT: A data-driven approach with LDA topic modeling. Heliyon.**
-
----
-
-## 📝 License  
-This repository is provided for academic and research purposes.
-
