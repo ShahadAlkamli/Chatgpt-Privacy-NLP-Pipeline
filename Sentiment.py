@@ -1,51 +1,75 @@
-# Import necessary libraries
+"""
+Sentiment analysis on preprocessed ChatGPT privacy tweets.
+
+Classifies each tweet as positive, negative, or neutral using TextBlob
+polarity, then saves a bar chart and a pie chart of the distribution.
+
+Input:  Data/preprocessed_tweets.csv
+Output: figures/sentiment_distribution.png
+        figures/sentiment_proportions.png
+"""
+
+import os
 import pandas as pd
-from textblob import TextBlob
 import matplotlib.pyplot as plt
+from textblob import TextBlob
 
-# Load your dataset into a pandas DataFrame
-file_path = '/Users/shahadsaeed/Desktop/preprocessed_tweets.csv'
-df = pd.read_csv(file_path)
+# Paths (relative to the repository root)
+INPUT_FILE = 'Data/preprocessed_tweets.csv'
+OUTPUT_DIR = 'figures'
 
-# Replace 'processed_tweet' with the actual column name in your CSV file that contains the tweet text
-text_column = 'processed_tweet'
+TEXT_COLUMN = 'processed_tweet'
+COLORS = ['green', 'gray', 'red']
 
-# Remove NaN values from the 'processed_tweet' column
-df[text_column] = df[text_column].fillna('')  # Replace NaN with an empty string
 
-# Function to perform sentiment analysis using TextBlob
 def analyze_sentiment(tweet):
-    analysis = TextBlob(str(tweet))  # Convert to string to handle NaN values
-    return 'positive' if analysis.sentiment.polarity > 0 else 'negative' if analysis.sentiment.polarity < 0 else 'neutral'
+    """Classify a tweet as positive, negative, or neutral."""
+    polarity = TextBlob(str(tweet)).sentiment.polarity
 
-# Apply the sentiment analysis function to each tweet in the dataset
-df['Sentiment'] = df[text_column].apply(analyze_sentiment)
+    if polarity > 0:
+        return 'positive'
+    if polarity < 0:
+        return 'negative'
+    return 'neutral'
 
-# Display the DataFrame with the sentiment column
-print(df[[text_column, 'Sentiment']])
 
-# Count the occurrences of each sentiment
-sentiment_counts = df['Sentiment'].value_counts()
+if __name__ == '__main__':
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# 1. Plot the sentiment distribution
-plt.figure(figsize=(8, 6), dpi=300)  # Increase dpi for better resolution
-sentiment_counts.plot(kind='bar', color=['green', 'gray', 'red'])
-plt.title('Sentiment Distribution of ChatGPT Privacy Tweets')
-plt.xlabel('Sentiment')
-plt.ylabel('Number of Tweets')
+    df = pd.read_csv(INPUT_FILE)
+    df[TEXT_COLUMN] = df[TEXT_COLUMN].fillna('')
+    print(f"Loaded {len(df)} tweets")
 
-# Adjusting layout to prevent label cutting
-plt.tight_layout()
+    df['Sentiment'] = df[TEXT_COLUMN].apply(analyze_sentiment)
+    sentiment_counts = df['Sentiment'].value_counts()
 
-# Save the figure with higher resolution
-plt.savefig('/Users/shahadsaeed/Desktop/sentiment_distribution.png')
-plt.close()
+    print('\nSentiment distribution:')
+    for sentiment, count in sentiment_counts.items():
+        share = count / len(df) * 100
+        print(f"  {sentiment:<9} {count:>6}  ({share:.1f}%)")
 
-# 2. Plot a pie chart of sentiment proportions
-plt.figure(figsize=(8, 8), dpi=300)  # Increase dpi for better resolution
-plt.pie(sentiment_counts, labels=sentiment_counts.index, autopct='%1.1f%%', colors=['green', 'gray', 'red'])
-plt.title('Sentiment Proportions')
+    # Bar chart of sentiment counts
+    plt.figure(figsize=(8, 6), dpi=300)
+    sentiment_counts.plot(kind='bar', color=COLORS)
+    plt.title('Sentiment Distribution of ChatGPT Privacy Tweets')
+    plt.xlabel('Sentiment')
+    plt.ylabel('Number of Tweets')
+    plt.xticks(rotation=0)
+    plt.tight_layout()
+    plt.savefig(os.path.join(OUTPUT_DIR, 'sentiment_distribution.png'))
+    plt.close()
 
-# Save the figure with higher resolution
-plt.savefig('/Users/shahadsaeed/Desktop/sentiment_proportions.png')
-plt.close()
+    # Pie chart of sentiment proportions
+    plt.figure(figsize=(8, 8), dpi=300)
+    plt.pie(
+        sentiment_counts,
+        labels=sentiment_counts.index,
+        autopct='%1.1f%%',
+        colors=COLORS
+    )
+    plt.title('Sentiment Proportions')
+    plt.tight_layout()
+    plt.savefig(os.path.join(OUTPUT_DIR, 'sentiment_proportions.png'))
+    plt.close()
+
+    print(f"\nFigures saved to {OUTPUT_DIR}/")
