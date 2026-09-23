@@ -1,40 +1,93 @@
+"""
+LDA topic modeling on preprocessed ChatGPT privacy tweets.
+
+Builds an LDA model with Gensim, prints the extracted topics, and
+visualizes the results as a word cloud and a topic distribution chart.
+
+The optimal number of topics (3) was determined using coherence and
+perplexity scores, as reported in the published study.
+"""
+
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 from gensim import corpora
 from gensim.models import LdaModel
 from wordcloud import WordCloud
-import matplotlib.pyplot as plt
-import seaborn as sns
 
-# Load your preprocessed CSV file
-input_file_path = '/Users/shahadsaeed/Desktop/preprocessed_tweets.csv'
-df = pd.read_csv(input_file_path)
+# Paths (relative to the repository root)
+INPUT_FILE = 'Data/preprocessed_tweets.csv'
 
-# Filter out rows with missing 'processed_tweet'
+NUM_TOPICS = 3
+NUM_WORDS = 10
+PASSES = 15
+RANDOM_STATE = 42
+
+# Load preprocessed tweets
+df = pd.read_csv(INPUT_FILE)
 df = df.dropna(subset=['processed_tweet'])
+print(f"Loaded {len(df)} tweets")
 
-# Use the 'processed_tweet' column directly for LDA
-corpus = [text.split() for text in df['processed_tweet']]
+# Build dictionary and document-term matrix
+tokenized = [text.split() for text in df['processed_tweet']]
+dictionary = corpora.Dictionary(tokenized)
+corpus = [dictionary.doc2bow(tokens) for tokens in tokenized]
 
-# Create a dictionary representation of the documents
-dictionary = corpora.Dictionary(corpus)
+# Train the LDA model
+lda_model = LdaModel(
+    corpus,
+    num_topics=NUM_TOPICS,
+    id2word=dictionary,
+    passes=PASSES,
+    random_state=RANDOM_STATE
+)
 
-# Create a document-term matrix
-corpus = [dictionary.doc2bow(tokens) for tokens in corpus]
+# Print extracted topics
+print(f"\nExtracted {NUM_TOPICS} topics:\n")
+for topic_num, words in lda_model.show_topics(num_words=NUM_WORDS, formatted=False):
+    terms = ', '.join(word for word, _ in words)
+    print(f"Topic {topic_num}: {terms}\n")
 
-# Build the LDA model
-num_topics = 10  # Set the number of topics
-lda_model = LdaModel(corpus, num_topics=num_topics, id2word=dictionary, passes=15)
+# Word cloud of the top terms across all topics
+top_words = [
+    word
+    for topic_id in range(NUM_TOPICS)
+    for word, _ in lda_model.show_topic(topic_id, topn=NUM_WORDS)
+]
 
-# Extract and print the topics
-topics = lda_model.show_topics(num_words=10, formatted=False)
-for topic_num, words in topics:
-    print(f"Topic: {topic_num}")
-    print(f"Words: {', '.join([word[0] for word in words])}\n")
+wordcloud = WordCloud(
+    width=800, height=400, background_color='white'
+).generate(' '.join(top_words))
 
-# Visualize topics with a Word Cloud
-topics = []
-for topic_id in range(num_topics):
-    topic_words = lda_model.show_topic(topic_id, topn=10)
+plt.figure(figsize=(10, 5), dpi=300)
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis('off')
+plt.tight_layout()
+plt.show()
+
+# Distribution of dominant topics across documents
+dominant_topics = [
+    max(lda_model[doc], key=lambda x: x[1])[0] for doc in corpus
+]
+topic_counts = pd.Series(dominant_topics).value_counts().sort_index()
+
+plt.figure(figsize=(10, 6), dpi=300)
+sns.barplot(
+    x=topic_counts.index,
+    y=topic_counts.values,
+    hue=topic_counts.index,
+    palette='viridis',
+    legend=False
+)
+plt.title('Dominant Topic Distribution')
+plt.xlabel('Topic')
+plt.ylabel('Number of Tweets')
+plt.tight_layout()
+plt.show()
+
+print('\nTweets per topic:')
+for topic_id, count in topic_counts.items():
+    print(f"  Topic {topic_id}: {count}")    topic_words = lda_model.show_topic(topic_id, topn=10)
     words = [word for word, _ in topic_words if word in dictionary.token2id]
     topics.append(words)
 
