@@ -1,6 +1,6 @@
 # ChatGPT Privacy Analysis – NLP Pipeline 
 
-### Based on the research paper:
+### Based on the research paper: 
 
 **"Understanding privacy concerns in ChatGPT: A data-driven approach with LDA topic modeling" (Heliyon, 2024)**
 Authors: Shahad Alkamli & Reham Alabduljabbar
