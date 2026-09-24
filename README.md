@@ -1,4 +1,4 @@
-# ChatGPT Privacy Analysis – NLP Pipeline
+# ChatGPT Privacy Analysis – NLP Pipeline 
 
 ### Based on the research paper:
 
